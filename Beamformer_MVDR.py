@@ -30,7 +30,7 @@ class beamformer_MVDR:
             r_0p = dist(self.mic_position[0], look_position)
             r_mp = []
             a = []
-            for i in np.arange(len(self.mic_position)):
+            for i in np.arange(self.number_of_mic):
                 r_ip = dist(self.mic_position[i], look_position)
                 delta_r_mp = r_0p - r_ip
                 a_i = r_0p / r_ip * np.exp(-1 * 1j * 2 * np.pi * delta_r_mp / wavelength)
@@ -40,15 +40,15 @@ class beamformer_MVDR:
             r_0p = dist(self.mic_position[0], look_position)
             r_mp = []
             a = []
-            for i in np.arange(len(self.mic_position)):
+            for i in np.arange(self.number_of_mic):
                 r_ip = dist(self.mic_position[i], look_position)
                 a_i = r_0p / r_ip
                 r_mp.append(r_ip)
                 a.append(a_i)
-        a = np.array(a).reshape([1,len(self.mic_position)])
+        a = np.array(a).reshape([1,self.number_of_mic])
         weight = np.matmul(a, np.conjugate(a).T)
         a_normalized = a / weight
-        return a_normalized
+        return a
 
     def get_steering_vector_near_field(self, look_position):
         steering_vector = np.empty((len(self.frequency_grid), self.number_of_mic), dtype=np.complex64)
@@ -115,3 +115,17 @@ class beamformer_MVDR:
         for f in range(0, number_of_bins):
             enhanced_spectrum[:, f] = np.matmul(np.conjugate(beamformer[:, f]).T, complex_spectrum[:, :, f])
         return enhanced_spectrum
+    
+    def get_filter(self, rect_grid, beamformer, frequency):
+        steering_vector_unit = np.empty([rect_grid.gpos.shape[1], self.number_of_mic], dtype=np.complex64)
+        f = (np.abs(self.frequency_grid - frequency)).argmin()
+        print(f'Calculating result for {self.frequency_grid[f]}Hz')
+        for ind_grid in np.arange(rect_grid.gpos.shape[1]):
+            steering_vector_column = []
+            steering_vector_column = self.get_single_steering_vector_near_field(rect_grid.gpos[:,ind_grid], frequency)
+            steering_vector_unit[ind_grid, :] = steering_vector_column
+        w = np.mat(beamformer[:, f].reshape([self.number_of_mic, 1]))
+        B = w.H * steering_vector_unit.T
+        B = np.abs(B) / np.max(np.abs(B)) # normalization
+        return B
+            
