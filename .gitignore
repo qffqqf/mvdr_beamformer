@@ -131,3 +131,7 @@ dmypy.json
 # data
 *.h5
 *.wav
+
+# folder
+results
+test_*

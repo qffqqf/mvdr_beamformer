@@ -50,8 +50,8 @@ def spec2wav(spectrogram, sampling_frequency, fftl, frame_len, shift_len):
         cut_data[0:int(fftl / 2) + 1] = half_spec.T
         cut_data[int(fftl / 2) + 1:] =  np.flip(np.conjugate(half_spec[1:int(fftl / 2)]), axis=0)
         cut_data2 = np.real(ifft(cut_data, n=fftl))
-        # result[start_point:end_point] = result[start_point:end_point] + np.real(cut_data2 * hanning_inv.T)
-        result[start_point:end_point] = result[start_point:end_point] + np.real(cut_data2 * hanning.T)
+        result[start_point:end_point] = result[start_point:end_point] + np.real(cut_data2)
+        # result[start_point:end_point] = result[start_point:end_point] + np.real(cut_data2 * hanning.T)
         start_point = start_point + shift_len
         end_point = end_point + shift_len
     return result[0:end_point - shift_len]
