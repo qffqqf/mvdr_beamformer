@@ -2,6 +2,7 @@
 import numpy as np
 from math import dist
 from scipy.fftpack import fft
+import utils
 
 
 class beamformer_MVDR:
@@ -46,8 +47,8 @@ class beamformer_MVDR:
                 r_mp.append(r_ip)
                 a.append(a_i)
         a = np.array(a).reshape([1,self.number_of_mic])
-        weight = np.matmul(a, np.conjugate(a).T)
-        a_normalized = a / weight
+        # weight = np.matmul(a, np.conjugate(a).T)
+        # a_normalized = a / weight
         return a
 
     def get_steering_vector_near_field(self, look_position):
@@ -128,4 +129,22 @@ class beamformer_MVDR:
         B = w.H * steering_vector_unit.T
         B = np.abs(B) / np.max(np.abs(B)) # normalization
         return B
-            
+
+    def get_noise_array_response(self, noise_pos, noise_spec):
+        noise_array_response = np.empty([len(self.frequency_grid), noise_spec.shape[0], self.number_of_mic], dtype=np.complex64)
+        for ind_f in np.arange(len(self.frequency_grid)):
+            steering_vector_column = []
+            steering_vector_column = self.get_single_steering_vector_near_field(noise_pos, self.frequency_grid[ind_f])
+            noise_freq = np.mat(noise_spec[:,ind_f]).reshape([noise_spec.shape[0], 1])
+            noise_array_response[ind_f, :, :] = noise_freq * steering_vector_column
+        return noise_array_response
+
+    def get_augmented_noise(self, noise_pos, multi_signal, noise_ch_ind):
+        noise_channel = np.mat(multi_signal[:,int(noise_ch_ind)].reshape([multi_signal[:,int(noise_ch_ind)].size, 1]))
+        noise_spectrum = utils.get_spectrogram(noise_channel, self.fft_length, self.fft_shift, self.fft_length)[0,:,:]
+        noise_array_response = self.get_noise_array_response(noise_pos, noise_spectrum)
+        noise_audio = utils.spec2wav(noise_array_response[:,:,0].T, self.sampling_rate, self.fft_length, self.fft_length, self.fft_shift)
+        noise_signal = np.empty([len(noise_audio), self.number_of_mic], dtype=np.float32)
+        for ind_ch in np.arange(self.number_of_mic):
+            noise_signal[:,ind_ch] = utils.spec2wav(noise_array_response[:,:,ind_ch].T, self.sampling_rate, self.fft_length, self.fft_length, self.fft_shift)
+        return noise_signal
