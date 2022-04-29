@@ -8,7 +8,7 @@ import multiprocessing
 from joblib import Parallel, delayed
 from tqdm import tqdm
 import os
-from pylab import axis, imshow, colorbar, title, savefig
+from pylab import axis, imshow, colorbar, title, savefig, figure
 
 
 def getIndicator(look_pos):
@@ -35,6 +35,30 @@ def getIndicator(look_pos):
     # result = [look_pos[0], look_pos[1], indi_temp]
     return indi_temp
 
+def getIndicatorNoise(noise_pos):
+    noise_signal = mvdr_beamformer.get_augmented_noise(noise_pos, multi_signal, NOISE_CH)
+    spatial_correlation_matrix = mvdr_beamformer.get_spatial_correlation_matrix(noise_signal) # noise covariance matrix
+    beamformer = mvdr_beamformer.get_mvdr_beamformer(steering_vector, spatial_correlation_matrix)
+    enhanced_spectrum = mvdr_beamformer.apply_beamformer(beamformer, complex_spectrum)
+    enhanced_audio = utils.spec2wav(enhanced_spectrum, SAMPLING_RATE, FFT_LENGTH, FFT_LENGTH, FFT_SHIFT)
+    data = enhanced_audio / np.max(np.abs(enhanced_audio)) * 0.7
+    # t = np.arange(len(data)) / SAMPLING_RATE
+    f = np.linspace(0, SAMPLING_RATE, len(data))
+    analytic_signal = signal.hilbert(data)
+    amplitude_envelope = np.abs(analytic_signal)
+    ses = np.abs(np.fft.fft(amplitude_envelope) / len(data))
+    ses = ses[:int(len(data)/50)]
+    freqs = f[:int(len(data)/50)]
+    mod_freq = 850
+    ind_mod = (np.abs(freqs - mod_freq)).argmin()
+    # noise_freq = 400
+    # ind_mod_noise = (np.abs(freqs - noise_freq)).argmin()
+    thres1 = signal.medfilt(ses, 255)
+    thres2 = stats.median_abs_deviation(ses)
+    thres3 = thres1 + 6 * thres2
+    indi_temp = round(ses[ind_mod] / thres3.mean(), 2)
+    # result = [look_pos[0], look_pos[1], indi_temp]
+    return indi_temp
 
 # Parameters
 
@@ -53,10 +77,15 @@ OUTPUT_FOLDER = f'result_increment_{INCREMENT}'
 if not os.path.exists(OUTPUT_FOLDER):
     os.makedirs(OUTPUT_FOLDER)
 
-RESULT_NAME = 'result_increment_{INCREMENT}.npy'
-FIGURE_NAME = 'figure_increment_{INCREMENT}.epi'
+RESULT_NAME = 'result_increment_source_{INCREMENT}.npy'
+FIGURE_NAME = 'figure_increment_source_{INCREMENT}.epi'
 RESULT_NAME = os.path.join(OUTPUT_FOLDER, RESULT_NAME)
 FIGURE_NAME = os.path.join(OUTPUT_FOLDER, FIGURE_NAME)
+
+RESULT_NAME2 = 'result_increment_noise_{INCREMENT}.npy'
+FIGURE_NAME2 = 'figure_increment_noise_{INCREMENT}.epi'
+RESULT_NAME2 = os.path.join(OUTPUT_FOLDER, RESULT_NAME2)
+FIGURE_NAME2 = os.path.join(OUTPUT_FOLDER, FIGURE_NAME2)
 
 mg = MicGeom(from_file='./array_geom/array_9.xml')
 number_of_mic = mg.mpos.shape[1]
@@ -102,6 +131,7 @@ myList = [rg.gpos[:,ind] for ind in np.arange(rg.gpos.shape[1])]
 num_cores = multiprocessing.cpu_count()
 inputs = tqdm(myList)
 
+# source mismatch
 processed_list = Parallel(n_jobs=num_cores)(delayed(getIndicator)(i) for i in inputs)
 
 results = np.array(processed_list)
@@ -118,5 +148,27 @@ Z_g = results.reshape(grid_points,grid_points)
 imshow( Z_g.T, origin='lower', extent=rg.extend())
 colorbar()
 axis('equal')
-title('interference location mismatch')
+title('source location mismatch')
 savefig(FIGURE_NAME, format='eps')
+
+# noise mismatch
+inputs2 = tqdm(myList)
+processed_list = Parallel(n_jobs=num_cores)(delayed(getIndicatorNoise)(i) for i in inputs2)
+
+results = np.array(processed_list)
+
+with open(RESULT_NAME2, 'wb') as f:
+    np.save(f, results)
+
+"""
+plot beamformer
+"""
+
+Z_g = results.reshape(grid_points,grid_points)
+# imshow( Z_g.T, origin='lower', extent=rg.extend(), interpolation='bicubic')
+figure()
+imshow( Z_g.T, origin='lower', extent=rg.extend())
+colorbar()
+axis('equal')
+title('interference location mismatch')
+savefig(FIGURE_NAME2, format='eps')

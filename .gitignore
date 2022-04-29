@@ -137,4 +137,4 @@ results
 tests
 data
 test_*
-*.npy
+result_increment_*
