@@ -105,6 +105,8 @@ class beamformer_MVDR:
         for f in range(0, len(self.frequency_grid)):
             R_cut = np.reshape(R[:, :, f], [self.number_of_mic, self.number_of_mic])
             R_cut = np.mat(R_cut)
+            #diagonal loading for singular matrix
+            R_cut = R_cut + np.eye(self.number_of_mic, dtype=int)
             steering_vector_cut = steering_vector[f,:]
             steering_vector_cut = np.mat(steering_vector_cut).T
             beamformer[:, f] = np.asarray(R_cut.I * steering_vector_cut / (steering_vector_cut.H * R_cut.I * steering_vector_cut)).reshape(self.number_of_mic,)

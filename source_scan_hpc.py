@@ -16,7 +16,8 @@ def getIndicator(look_pos):
     beamformer = mvdr_beamformer.get_mvdr_beamformer(steering_vector, spatial_correlation_matrix)
     enhanced_spectrum = mvdr_beamformer.apply_beamformer(beamformer, complex_spectrum)
     enhanced_audio = utils.spec2wav(enhanced_spectrum, SAMPLING_RATE, FFT_LENGTH, FFT_LENGTH, FFT_SHIFT)
-    data = enhanced_audio / np.max(np.abs(enhanced_audio)) * 0.7
+    # data = enhanced_audio / np.max(np.abs(enhanced_audio)) * 0.7
+    data = enhanced_audio
     # t = np.arange(len(data)) / SAMPLING_RATE
     f = np.linspace(0, SAMPLING_RATE, len(data))
     analytic_signal = signal.hilbert(data)
@@ -37,12 +38,12 @@ def getIndicator(look_pos):
 
 # Parameters
 
-INCREMENT = 1
+INCREMENT = 0.5
 
 test_name = "scan"
-MIX_FILENAME = 'mix_mod.h5'
-SIG_FILENAME = 'sig_mod.h5'
-IAN_FILENAME = 'noise_mod.h5'
+MIX_FILENAME = 'mix_mod_64.h5'
+SIG_FILENAME = 'sig_mod_64.h5'
+IAN_FILENAME = 'noise_mod_64.h5'
 dir_path = './data'
 MIX_FILENAME = os.path.join(dir_path, MIX_FILENAME)
 SIG_FILENAME = os.path.join(dir_path, SIG_FILENAME)
@@ -52,21 +53,21 @@ OUTPUT_FOLDER = f'result_increment_{INCREMENT}'
 if not os.path.exists(OUTPUT_FOLDER):
     os.makedirs(OUTPUT_FOLDER)
 
-RESULT_NAME = 'result_increment_source_{INCREMENT}.npy'
-FIGURE_NAME = 'figure_increment_source_{INCREMENT}.epi'
+RESULT_NAME = f'result_increment_source_{INCREMENT}.npy'
+FIGURE_NAME = f'figure_increment_source_{INCREMENT}.epi'
 RESULT_NAME = os.path.join(OUTPUT_FOLDER, RESULT_NAME)
 FIGURE_NAME = os.path.join(OUTPUT_FOLDER, FIGURE_NAME)
 
-mg = MicGeom(from_file='./array_geom/array_9.xml')
+mg = MicGeom(from_file='./array_geom/array_64_large.xml')
 number_of_mic = mg.mpos.shape[1]
 MIC_POS = []
 for i in np.arange(number_of_mic):
     MIC_POS.append(mg.mpos[:,int(i)])
 
-LOOK_POS = [0,2,0.5]
-NOISE_POS = [4,2,0.5]
-NOISE_CH = 1
-SIG_CH = 7
+LOOK_POS = [0.8,2.3,0.5]
+NOISE_POS = [3.2,2.2,0.5]
+NOISE_CH = 51
+SIG_CH = 19
 SAMPLING_RATE = 51200
 FFT_LENGTH = 8192
 FFT_SHIFT = 2048
@@ -82,16 +83,11 @@ beamformer = mvdr_beamformer.get_mvdr_beamformer(steering_vector, spatial_correl
 complex_spectrum = utils.get_spectrogram(multi_signal, FFT_LENGTH, FFT_SHIFT, FFT_LENGTH)
 enhanced_spectrum = mvdr_beamformer.apply_beamformer(beamformer, complex_spectrum)
 
-mvdr_beamformer = beamformer_MVDR(MIC_POS, sampling_rate=SAMPLING_RATE, fft_length=FFT_LENGTH, fft_shift=FFT_SHIFT, sound_speed=SOUND_SPEED)
-multi_signal = utils.get_data_from_h5(MIX_FILENAME, skip_last_channel=False)
-noise_signal = mvdr_beamformer.get_augmented_noise(NOISE_POS, multi_signal, NOISE_CH)
-spatial_correlation_matrix = mvdr_beamformer.get_spatial_correlation_matrix(noise_signal) # noise covariance matrix
-
 """
 define grid
 """
-rg = RectGrid( x_min=-0.2, x_max=4,
-                        y_min=-0.2, y_max=4,
+rg = RectGrid( x_min=-0.2, x_max=4.2,
+                        y_min=-0.2, y_max=4.2,
                         z=0.5, increment=INCREMENT )
 
 grid_points = int(np.sqrt(rg.gpos.shape[1]))
