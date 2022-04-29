@@ -8,6 +8,7 @@ import multiprocessing
 from joblib import Parallel, delayed
 from tqdm import tqdm
 import os
+from pylab import axis, imshow, colorbar, title, savefig
 
 
 def getIndicator(look_pos):
@@ -36,6 +37,9 @@ def getIndicator(look_pos):
 
 
 # Parameters
+
+INCREMENT = 1
+
 test_name = "scan"
 MIX_FILENAME = 'mix_mod.h5'
 SIG_FILENAME = 'sig_mod.h5'
@@ -45,7 +49,14 @@ MIX_FILENAME = os.path.join(dir_path, MIX_FILENAME)
 SIG_FILENAME = os.path.join(dir_path, SIG_FILENAME)
 IAN_FILENAME = os.path.join(dir_path, IAN_FILENAME)
 
-INCREMENT = 1
+OUTPUT_FOLDER = f'result_increment_{INCREMENT}'
+if not os.path.exists(OUTPUT_FOLDER):
+    os.makedirs(OUTPUT_FOLDER)
+
+RESULT_NAME = 'result_increment_{INCREMENT}.npy'
+FIGURE_NAME = 'figure_increment_{INCREMENT}.epi'
+RESULT_NAME = os.path.join(OUTPUT_FOLDER, RESULT_NAME)
+FIGURE_NAME = os.path.join(OUTPUT_FOLDER, FIGURE_NAME)
 
 mg = MicGeom(from_file='./array_geom/array_9.xml')
 number_of_mic = mg.mpos.shape[1]
@@ -95,5 +106,17 @@ processed_list = Parallel(n_jobs=num_cores)(delayed(getIndicator)(i) for i in in
 
 results = np.array(processed_list)
 
-with open(f'result_increment_{INCREMENT}.npy', 'wb') as f:
+with open(RESULT_NAME, 'wb') as f:
     np.save(f, results)
+
+"""
+plot beamformer
+"""
+
+Z_g = results.reshape(grid_points,grid_points)
+# imshow( Z_g.T, origin='lower', extent=rg.extend(), interpolation='bicubic')
+imshow( Z_g.T, origin='lower', extent=rg.extend())
+colorbar()
+axis('equal')
+title('interference location mismatch')
+savefig(FIGURE_NAME, format='eps')
