@@ -8,12 +8,12 @@ import multiprocessing
 from joblib import Parallel, delayed
 from tqdm import tqdm
 import os
-from pylab import axis, imshow, colorbar, title, savefig
+from pylab import axis, imshow, colorbar, title, savefig, show
 
 
 def getIndicator(look_pos):
     steering_vector = mvdr_beamformer.get_steering_vector_near_field(look_pos)
-    beamformer = mvdr_beamformer.get_mvdr_beamformer(steering_vector, spatial_correlation_matrix)
+    beamformer = mvdr_beamformer.get_mvdr_beamformer(steering_vector, spatial_correlation_matrix, isDiagonalLoading)
     enhanced_spectrum = mvdr_beamformer.apply_beamformer(beamformer, complex_spectrum)
     enhanced_audio = utils.spec2wav(enhanced_spectrum, SAMPLING_RATE, FFT_LENGTH, FFT_LENGTH, FFT_SHIFT)
     # data = enhanced_audio / np.max(np.abs(enhanced_audio)) * 0.7
@@ -38,10 +38,11 @@ def getIndicator(look_pos):
 
 # Parameters
 
-INCREMENT = 0.5
+INCREMENT = 0.2
+isDiagonalLoading = False
 
 test_name = "scan"
-MIX_FILENAME = 'mix_mod_64.h5'
+MIX_FILENAME = 'mix_mod_2_large.h5'
 SIG_FILENAME = 'sig_mod_64.h5'
 IAN_FILENAME = 'noise_mod_64.h5'
 dir_path = './data'
@@ -58,7 +59,7 @@ FIGURE_NAME = f'figure_increment_source_{INCREMENT}.epi'
 RESULT_NAME = os.path.join(OUTPUT_FOLDER, RESULT_NAME)
 FIGURE_NAME = os.path.join(OUTPUT_FOLDER, FIGURE_NAME)
 
-mg = MicGeom(from_file='./array_geom/array_64_large.xml')
+mg = MicGeom(from_file='./array_geom/array_2_large.xml')
 number_of_mic = mg.mpos.shape[1]
 MIC_POS = []
 for i in np.arange(number_of_mic):
@@ -66,8 +67,10 @@ for i in np.arange(number_of_mic):
 
 LOOK_POS = [0.8,2.3,0.5]
 NOISE_POS = [3.2,2.2,0.5]
-NOISE_CH = 51
-SIG_CH = 19
+# NOISE_CH = 51
+# SIG_CH = 19
+NOISE_CH = 1
+SIG_CH = 0
 SAMPLING_RATE = 51200
 FFT_LENGTH = 8192
 FFT_SHIFT = 2048
@@ -79,7 +82,7 @@ multi_signal = utils.get_data_from_h5(MIX_FILENAME, skip_last_channel=False)
 noise_signal = mvdr_beamformer.get_augmented_noise(NOISE_POS, multi_signal, NOISE_CH)
 spatial_correlation_matrix = mvdr_beamformer.get_spatial_correlation_matrix(noise_signal) # noise covariance matrix
 steering_vector = mvdr_beamformer.get_steering_vector_near_field(LOOK_POS)
-beamformer = mvdr_beamformer.get_mvdr_beamformer(steering_vector, spatial_correlation_matrix)
+beamformer = mvdr_beamformer.get_mvdr_beamformer(steering_vector, spatial_correlation_matrix, isDiagonalLoading)
 complex_spectrum = utils.get_spectrogram(multi_signal, FFT_LENGTH, FFT_SHIFT, FFT_LENGTH)
 enhanced_spectrum = mvdr_beamformer.apply_beamformer(beamformer, complex_spectrum)
 
@@ -116,3 +119,4 @@ colorbar()
 axis('equal')
 title('source location mismatch')
 savefig(FIGURE_NAME, format='eps')
+show()
