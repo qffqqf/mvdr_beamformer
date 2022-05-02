@@ -55,3 +55,14 @@ def spec2wav(spectrogram, sampling_frequency, fftl, frame_len, shift_len):
         start_point = start_point + shift_len
         end_point = end_point + shift_len
     return result[0:end_point - shift_len]
+
+def getSES(time_signal, sampling_rate, scaling_factor=2):
+    sig_lenth = len(time_signal)
+    f = np.linspace(0, sampling_rate, sig_lenth)
+    analytic_signal = sg.hilbert(time_signal)
+    amplitude_envelope = np.abs(analytic_signal)
+    ses = np.abs(fft(amplitude_envelope) / sig_lenth)
+    ses = ses[:int(sig_lenth/scaling_factor)]
+    freqs = f[:int(sig_lenth/scaling_factor)]
+    return ses, freqs
+    

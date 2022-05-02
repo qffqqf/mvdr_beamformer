@@ -16,15 +16,8 @@ def getIndicator(look_pos):
     beamformer = mvdr_beamformer.get_mvdr_beamformer(steering_vector, spatial_correlation_matrix, isDiagonalLoading)
     enhanced_spectrum = mvdr_beamformer.apply_beamformer(beamformer, complex_spectrum)
     enhanced_audio = utils.spec2wav(enhanced_spectrum, SAMPLING_RATE, FFT_LENGTH, FFT_LENGTH, FFT_SHIFT)
-    # data = enhanced_audio / np.max(np.abs(enhanced_audio)) * 0.7
-    data = enhanced_audio
-    # t = np.arange(len(data)) / SAMPLING_RATE
-    f = np.linspace(0, SAMPLING_RATE, len(data))
-    analytic_signal = signal.hilbert(data)
-    amplitude_envelope = np.abs(analytic_signal)
-    ses = np.abs(np.fft.fft(amplitude_envelope) / len(data))
-    ses = ses[:int(len(data)/50)]
-    freqs = f[:int(len(data)/50)]
+    data = enhanced_audio / np.max(np.abs(enhanced_audio)) * 0.7
+    ses, freqs = utils.getSES(data, SAMPLING_RATE, 50)
     mod_freq = 850
     ind_mod = (np.abs(freqs - mod_freq)).argmin()
     # noise_freq = 400
