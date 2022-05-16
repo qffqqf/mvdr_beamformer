@@ -15,9 +15,11 @@ def getIndicator(look_pos):
     steering_vector = mvdr_beamformer.get_steering_vector_near_field(look_pos)
     beamformer = mvdr_beamformer.get_mvdr_beamformer(steering_vector, spatial_correlation_matrix, isDiagonalLoading)
     enhanced_spectrum = mvdr_beamformer.apply_beamformer(beamformer, complex_spectrum)
-    enhanced_audio = utils.spec2wav(enhanced_spectrum, SAMPLING_RATE, FFT_LENGTH, FFT_LENGTH, FFT_SHIFT)
-    data = enhanced_audio / np.max(np.abs(enhanced_audio)) * 0.7
-    ses, freqs = utils.getSES(data, SAMPLING_RATE, 50)
+    # enhanced_audio = utils.spec2wav(enhanced_spectrum, SAMPLING_RATE, FFT_LENGTH, FFT_LENGTH, FFT_SHIFT)
+    # data = enhanced_audio / np.max(np.abs(enhanced_audio)) * 0.7
+    # ses, freqs = utils.getSES(data, SAMPLING_RATE, 50)
+    ses = np.abs(enhanced_spectrum.mean(0))
+    freqs = mvdr_beamformer.frequency_grid
     mod_freq = 70
     ind_mod = (np.abs(freqs - mod_freq)).argmin()
     # noise_freq = 400
@@ -74,6 +76,9 @@ SOUND_SPEED = 343
 mvdr_beamformer = beamformer_MVDR(MIC_POS, sampling_rate=SAMPLING_RATE, fft_length=FFT_LENGTH, fft_shift=FFT_SHIFT, sound_speed=SOUND_SPEED)
 ### noise spectrogram multiplied with steering vector pointing to its position
 multi_signal = utils.get_data_from_h5(MIX_FILENAME, skip_last_channel=False)
+multi_signal = utils.demod(multi_signal)
+# noise_signal = utils.get_data_from_h5(IAN_FILENAME, skip_last_channel=False)
+# noise_signal = utils.demod(noise_signal)
 noise_signal = mvdr_beamformer.get_augmented_noise(NOISE_POS, multi_signal, NOISE_CH)
 spatial_correlation_matrix = mvdr_beamformer.get_spatial_correlation_matrix(noise_signal) # noise covariance matrix
 steering_vector = mvdr_beamformer.get_steering_vector_near_field(LOOK_POS)

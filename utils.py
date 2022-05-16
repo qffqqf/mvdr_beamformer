@@ -65,4 +65,10 @@ def getSES(time_signal, sampling_rate, scaling_factor=2):
     ses = ses[:int(sig_lenth/scaling_factor)]
     freqs = f[:int(sig_lenth/scaling_factor)]
     return ses, freqs
-    
+
+def demod(multi_signal):
+    sig_shape = multi_signal.shape
+    demod_sig = np.empty([sig_shape[0],sig_shape[1]], dtype=float)
+    for ind_chn in np.arange(sig_shape[1]):
+        demod_sig[:,ind_chn] = np.abs(sg.hilbert(multi_signal[:,ind_chn]))
+    return demod_sig
