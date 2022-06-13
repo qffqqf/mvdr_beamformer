@@ -131,6 +131,7 @@ dmypy.json
 # data
 *.h5
 *.wav
+*.svg
 
 # folder
 results

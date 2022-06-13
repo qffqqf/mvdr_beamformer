@@ -37,6 +37,7 @@ def get_spectrogram(wav_data, frame, shift, fftl):
     return spectrums
 
 def spec2wav(spectrogram, sampling_frequency, fftl, frame_len, shift_len):
+    # print(np.shape(spectrogram))
     n_of_frame, fft_half = np.shape(spectrogram)
     # shift_len = fft_half
     # hanning_inv = 1 - sg.windows.hann(fftl + 1, sym=False)[: - 1]
@@ -72,3 +73,13 @@ def demod(multi_signal):
     for ind_chn in np.arange(sig_shape[1]):
         demod_sig[:,ind_chn] = np.abs(sg.hilbert(multi_signal[:,ind_chn]))
     return demod_sig
+
+def AM_sig_gen(duration=1, sampling_rate=51200,
+               f_c=float(6000), f_m=float(850), A_c=float(1), A_m=float(1),
+               modulation_index = float(1)):
+    t = np.linspace(0, duration, sampling_rate)
+    # carrier = A_c*np.cos(2*np.pi*f_c*t)
+    # modulator = A_m*np.cos(2*np.pi*f_m*t)
+    product = A_c*(1+modulation_index*np.cos(2*np.pi*f_m*t))*np.cos(2*np.pi*f_c*t)
+    product = product / np.max(np.abs(product)) * 0.7
+    return product
