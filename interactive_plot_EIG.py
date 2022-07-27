@@ -7,14 +7,14 @@ def f(LOOK_DIRECTION, SIG_FREQ, N_ele):
     SOUND_SPEED = 343
     WAVE_LENGTH = SOUND_SPEED / SIG_FREQ
     ANGLE = 30
-    Ny = 1
+    Ny = 2
     Nx = N_ele-2*Ny
     Lx = 0.14
     Ly = 0.1
-    alpha_left = np.deg2rad(np.arange(-90, LOOK_DIRECTION-ANGLE/2, 0.005).reshape([1, -1]))
-    alpha_right = np.deg2rad(np.arange(LOOK_DIRECTION+ANGLE/2, 90, 0.005).reshape([1, -1]))
+    alpha_left = np.deg2rad(np.arange(-90, LOOK_DIRECTION-ANGLE/2, 0.5).reshape([1, -1]))
+    alpha_right = np.deg2rad(np.arange(LOOK_DIRECTION+ANGLE/2, 90, 0.5).reshape([1, -1]))
     alpha_out = np.concatenate( (alpha_left,alpha_right), axis=1)
-    alpha_in = np.deg2rad(np.arange(LOOK_DIRECTION-ANGLE/2, LOOK_DIRECTION+ANGLE/2, 0.005).reshape([1, -1]))
+    alpha_in = np.deg2rad(np.arange(LOOK_DIRECTION-ANGLE/2, LOOK_DIRECTION+ANGLE/2, 0.5).reshape([1, -1]))
     theta = np.deg2rad(np.arange(-90, 90, 0.1).reshape([1, -1]))
     mic_x_1 = -np.ones([Ny,1])*Lx/2
     mic_x_2 = np.ones([Ny,1])*Lx/2
@@ -33,7 +33,7 @@ def f(LOOK_DIRECTION, SIG_FREQ, N_ele):
     [eigval, eigvec] = linalg.eig(A_out, A_in, right=True)
     min_index = np.argmin(np.abs(eigval))
     beamformer = eigvec[:,min_index]
-    B = beamformer.T * a
+    B = beamformer.conj().T * a
     B = np.abs(B) / np.max(np.abs(B)) 
     y = []
     for ele in np.arange(B.shape[1]):
@@ -45,8 +45,8 @@ x=np.arange(-90, 90, 0.1).reshape([-1])
 
 # Define initial parameters
 init_direction = 0
-init_frequency = 4000
-init_elements = 4
+init_frequency = 1000
+init_elements = 6
 
 # Create the figure and the line that we will manipulate
 fig, ax = plt.subplots()
