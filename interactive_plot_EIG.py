@@ -6,9 +6,9 @@ from scipy import linalg
 def f(LOOK_DIRECTION, SIG_FREQ, N_ele):
     SOUND_SPEED = 343
     WAVE_LENGTH = SOUND_SPEED / SIG_FREQ
-    ANGLE = 90
-    Nx = N_ele-2
+    ANGLE = 30
     Ny = 1
+    Nx = N_ele-2*Ny
     Lx = 0.14
     Ly = 0.1
     alpha_left = np.deg2rad(np.arange(-90, LOOK_DIRECTION-ANGLE/2, 0.005).reshape([1, -1]))
@@ -19,7 +19,7 @@ def f(LOOK_DIRECTION, SIG_FREQ, N_ele):
     mic_x_1 = -np.ones([Ny,1])*Lx/2
     mic_x_2 = np.ones([Ny,1])*Lx/2
     mic_x_3 = np.transpose(np.array([np.linspace(-Lx/2,Lx/2,Nx+2)]))
-    mic_x_3 = mic_x_3[1:Nx+1]
+    mic_x_3 = mic_x_3[1:Nx+1] + 0.01*Lx*(np.random.rand(Nx,1)-0.5)/Nx
     mic_y_1 = np.transpose(np.array([np.linspace(Ly/2,-Ly/2,Ny)]))
     mic_y_2 = np.transpose(np.array([np.linspace(Ly/2,-Ly/2,Ny)]))
     mic_y_3 = np.ones([Nx,1])*Ly/2
@@ -28,15 +28,10 @@ def f(LOOK_DIRECTION, SIG_FREQ, N_ele):
     a = np.mat(np.exp(1j * 2* np.pi * (np.sin(theta)*mic_x + np.cos(theta)*mic_y) / WAVE_LENGTH))
     a_out = np.mat(np.exp(1j * 2* np.pi * (np.sin(alpha_out)*mic_x + np.cos(alpha_out)*mic_y) / WAVE_LENGTH))
     a_in = np.mat(np.exp(1j * 2* np.pi * (np.sin(alpha_in)*mic_x + np.cos(alpha_in)*mic_y) / WAVE_LENGTH))
-    
     A_in = a_in* np.conjugate(a_in.T)
     A_out = a_out* np.conjugate(a_out.T) 
-
     [eigval, eigvec] = linalg.eig(A_out, A_in, right=True)
     min_index = np.argmin(np.abs(eigval))
-    print(eigval)
-    print(np.abs(eigval))
-    print(eigval[min_index])
     beamformer = eigvec[:,min_index]
     B = beamformer.T * a
     B = np.abs(B) / np.max(np.abs(B)) 
@@ -58,6 +53,7 @@ fig, ax = plt.subplots()
 line, = plt.plot(x, f(init_direction, init_frequency, init_elements), lw=2)
 ax.set_xlabel('Degree[°]')
 ax.set_ylabel('SPL[dB]')
+ax.set_ylim(-70,0)
 
 # adjust the main plot to make room for the sliders
 plt.subplots_adjust(left=0.25, bottom=0.25)

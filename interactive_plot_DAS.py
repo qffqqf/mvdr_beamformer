@@ -10,7 +10,7 @@ def f(LOOK_DIRECTION, SIG_FREQ, N):
     FFT_LENGTH = 2048
     FFT_SHIFT = 1024
     SOUND_SPEED = 343
-    ELEMENT_DISTANCE = 0.15/(N-1)
+    ELEMENT_DISTANCE = 0.14/(N-1)
     WAVE_LENGTH = SOUND_SPEED / SIG_FREQ
     theta = np.deg2rad(np.arange(-90, 90, 0.1).reshape([1, -1])) # every angle for filter curve
     d = np.array([ELEMENT_DISTANCE]) * np.ones([N,1]) # sensor distance
@@ -38,6 +38,7 @@ fig, ax = plt.subplots()
 line, = plt.plot(x, f(init_direction, init_frequency, init_elements), lw=2)
 ax.set_xlabel('Degree[°]')
 ax.set_ylabel('SPL[dB]')
+ax.set_ylim(-70,0)
 
 # adjust the main plot to make room for the sliders
 plt.subplots_adjust(left=0.25, bottom=0.25)
