@@ -5,12 +5,11 @@ from matplotlib.widgets import Slider, Button
 from Beamformer_DAS import beamforimer_DAS
 import numpy as np
 
-def f(LOOK_DIRECTION, SIG_FREQ):
+def f(LOOK_DIRECTION, SIG_FREQ, N):
     SAMPLING_RATE = 16000
     FFT_LENGTH = 2048
     FFT_SHIFT = 1024
     SOUND_SPEED = 343
-    N = 4
     ELEMENT_DISTANCE = 0.15/(N-1)
     WAVE_LENGTH = SOUND_SPEED / SIG_FREQ
     theta = np.deg2rad(np.arange(-90, 90, 0.1).reshape([1, -1])) # every angle for filter curve
@@ -32,11 +31,13 @@ x=np.arange(-90, 90, 0.1).reshape([-1])
 # Define initial parameters
 init_direction = 0
 init_frequency = 4000
+init_elements = 4
 
 # Create the figure and the line that we will manipulate
 fig, ax = plt.subplots()
-line, = plt.plot(x, f(init_direction, init_frequency), lw=2)
+line, = plt.plot(x, f(init_direction, init_frequency, init_elements), lw=2)
 ax.set_xlabel('Degree[°]')
+ax.set_ylabel('SPL[dB]')
 
 # adjust the main plot to make room for the sliders
 plt.subplots_adjust(left=0.25, bottom=0.25)
@@ -51,10 +52,22 @@ freq_slider = Slider(
     valinit=init_frequency,
 )
 
+# define the values to use for snapping
+allowed_vals = [i for i in range(2,17)]
+axelem = plt.axes([0.25, 0.025, 0.5, 0.04])
+elem_slider = Slider(
+    ax=axelem,
+    label='number of elements',
+    valmin=2,
+    valmax=16,
+    valinit=init_elements,
+    valstep=allowed_vals,
+)
+
 # Make a vertically oriented slider to control the amplitude
-axamp = plt.axes([0.1, 0.25, 0.0225, 0.63])
+axdirec = plt.axes([0.1, 0.25, 0.0225, 0.63])
 direc_slider = Slider(
-    ax=axamp,
+    ax=axdirec,
     label="Direction",
     valmin=-90,
     valmax=90,
@@ -65,13 +78,14 @@ direc_slider = Slider(
 
 # The function to be called anytime a slider's value changes
 def update(val):
-    line.set_ydata(f(direc_slider.val, freq_slider.val))
+    line.set_ydata(f(direc_slider.val, freq_slider.val, elem_slider.val))
     fig.canvas.draw_idle()
 
 
 # register the update function with each slider
 freq_slider.on_changed(update)
 direc_slider.on_changed(update)
+elem_slider.on_changed(update)
 
 # Create a `matplotlib.widgets.Button` to reset the sliders to initial values.
 resetax = plt.axes([0.8, 0.025, 0.1, 0.04])
@@ -81,6 +95,7 @@ button = Button(resetax, 'Reset', hovercolor='0.975')
 def reset(event):
     freq_slider.reset()
     direc_slider.reset()
+    elem_slider.reset()
 button.on_clicked(reset)
 
 plt.show()
