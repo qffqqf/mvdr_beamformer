@@ -5,37 +5,53 @@ from scipy import linalg
 
 def f(LOOK_DIRECTION, SIG_FREQ, N_ele):
     SOUND_SPEED = 343
-    WAVE_LENGTH = SOUND_SPEED / SIG_FREQ
-    ANGLE = 90
+    ANGLE = 30
     Ny = 1
     Nx = N_ele-2*Ny
-    Lx = 0.14
-    Ly = 0.02
-    alpha_left = np.deg2rad(np.arange(-90, LOOK_DIRECTION-ANGLE/3, 0.5).reshape([1, -1]))
-    alpha_right = np.deg2rad(np.arange(LOOK_DIRECTION+ANGLE/3, 90, 0.5).reshape([1, -1]))
-    alpha_out = np.concatenate( (alpha_left,alpha_right), axis=1)
-    alpha_in = np.deg2rad(np.arange(LOOK_DIRECTION-ANGLE/2, LOOK_DIRECTION+ANGLE/2, 0.5).reshape([1, -1]))
-    theta = np.deg2rad(np.arange(-90, 90, 0.1).reshape([1, -1]))
+    Lx = 0.5
+    Ly = 0.04
+    # position of mics
     mic_x_1 = -np.ones([Ny,1])*Lx/2
     mic_x_2 = np.ones([Ny,1])*Lx/2
     mic_x_3 = np.transpose(np.array([np.linspace(-Lx/2,Lx/2,Nx+2)]))
-    mic_x_3 = mic_x_3[1:Nx+1] + 0.01*Lx*(np.random.rand(Nx,1)-0.5)/Nx
-    mic_y_1 = np.transpose(np.array([np.linspace(Ly/2,-Ly/2,Ny)])) - 0.005*Ly*np.random.rand(Ny,1)/Ny
-    mic_y_2 = np.transpose(np.array([np.linspace(Ly/2,-Ly/2,Ny)])) - 0.005*Ly*np.random.rand(Ny,1)/Ny
+    mic_x_3 = mic_x_3[1:Nx+1] + 0.001*Lx*(np.random.rand(Nx,1)-0.5)/Nx
+    mic_y_1 = np.transpose(np.array([np.linspace(Ly/2,-Ly/2,Ny)])) - 0.001*Ly*np.random.rand(Ny,1)/Ny
+    mic_y_2 = np.transpose(np.array([np.linspace(Ly/2,-Ly/2,Ny)])) - 0.001*Ly*np.random.rand(Ny,1)/Ny
     mic_y_3 = np.ones([Nx,1])*Ly/2
     mic_x = np.concatenate( (np.concatenate((mic_x_1, mic_x_2), axis=0),mic_x_3), axis=0)
     mic_y = np.concatenate( (np.concatenate((mic_y_1, mic_y_2), axis=0),mic_y_3), axis=0)
-    a = np.mat(np.exp(1j * 2* np.pi * (np.sin(theta)*mic_x + np.cos(theta)*mic_y) / WAVE_LENGTH))
-    a_out = np.mat(np.exp(1j * 2* np.pi * (np.sin(alpha_out)*mic_x + np.cos(alpha_out)*mic_y) / WAVE_LENGTH))
-    a_in = np.mat(np.exp(1j * 2* np.pi * (np.sin(alpha_in)*mic_x + np.cos(alpha_in)*mic_y) / WAVE_LENGTH))
-    A_in = a_in* np.conjugate(a_in.T)
-    A_out = a_out* np.conjugate(a_out.T) 
-    [eigval, eigvec] = linalg.eig(A_out, A_in, right=True)
-    print(eigval)
-    min_index = np.argmin(np.abs(eigval))
+    # solve for beamformer
+    nBand = 10
+    BAND_FREQ = np.linspace(100,3000,nBand)
+    Energy = np.zeros([N_ele, N_ele])*1j
+    for freq in BAND_FREQ:
+        WAVE_LENGTH = SOUND_SPEED / freq
+        alpha_0 = np.deg2rad(LOOK_DIRECTION)
+        alpha_left = np.deg2rad(np.arange(-90, LOOK_DIRECTION-ANGLE/2, 0.1).reshape([1, -1]))
+        alpha_right = np.deg2rad(np.arange(LOOK_DIRECTION+ANGLE/2, 90, 0.1).reshape([1, -1]))
+        alpha_out = np.concatenate( (alpha_left,alpha_right), axis=1)
+        alpha_in = np.deg2rad(np.arange(LOOK_DIRECTION-ANGLE/2, LOOK_DIRECTION+ANGLE/2, 0.1).reshape([1, -1]))
+        a_0 = np.mat(np.exp(1j * 2* np.pi * (np.sin(alpha_0)*mic_x + np.cos(alpha_0)*mic_y) / WAVE_LENGTH))
+        a_out = np.mat(np.exp(1j * 2* np.pi * (np.sin(alpha_out)*mic_x + np.cos(alpha_out)*mic_y) / WAVE_LENGTH))
+        a_in = np.mat(np.exp(1j * 2* np.pi * (np.sin(alpha_in)*mic_x + np.cos(alpha_in)*mic_y) / WAVE_LENGTH))
+        A_0 = a_0* np.conjugate(a_0.T) 
+        A_out = a_out* np.conjugate(a_out.T) 
+        A_in = a_in* np.conjugate(a_in.T)
+        Energy = Energy + (A_out - A_in - A_0*(A_out.size/N_ele/10000))/nBand
+    
+    [eigval, eigvec] = linalg.eig(Energy, np.eye(N_ele), right=True)
+    min_index = np.argmin(np.real(eigval))
     beamformer = eigvec[:,min_index]
+    beamformer = beamformer/beamformer[0]
+    print(beamformer)
+
+    # beamforming
+    WAVE_LENGTH = SOUND_SPEED / SIG_FREQ
+    theta = np.deg2rad(np.arange(-90, 90, 0.1).reshape([1, -1]))
+    a = np.mat(np.exp(1j * 2* np.pi * (np.sin(theta)*mic_x + np.cos(theta)*mic_y) / WAVE_LENGTH))
     B = beamformer.conj().T * a
     B = np.abs(B) / np.max(np.abs(B)) 
+    
     y = []
     for ele in np.arange(B.shape[1]):
         y.append(B[0,ele])
@@ -54,7 +70,7 @@ fig, ax = plt.subplots()
 line, = plt.plot(x, f(init_direction, init_frequency, init_elements), lw=2)
 ax.set_xlabel('Degree[°]')
 ax.set_ylabel('SPL[dB]')
-ax.set_ylim(-20,0)
+ax.set_ylim(-50,0)
 
 # adjust the main plot to make room for the sliders
 plt.subplots_adjust(left=0.25, bottom=0.25)
